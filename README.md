@@ -1,71 +1,117 @@
 # ResonanceTransformer
 
-A modular, sparse transformer framework designed for emergent intelligence and high efficiency.
+**Stable Sparse Transformer with Tunable Emergence**  
+*Dynamic pruning + revival for emergent sparsity during training and inference*  
+MIT License – 2025
 
-ResonanceTransformer introduces dynamic structured sparsity into standard transformer blocks, achieving **~70–75% weight sparsity** with minimal accuracy loss. Through cyclic pruning and latent-memory revival, it automatically discovers resilient sub-networks — mimicking biological persistence while drastically reducing compute and memory footprint.
-
-Perfect for edge deployment, efficient fine-tuning, and research into emergent sparse intelligence.
+A drop-in PyTorch Transformer implementation with built-in dynamic sparsity mechanisms. Designed to maintain high performance while inducing controllable, stable sparsity (~50% by default) through a novel "resonance" pruning and revival cycle inspired by lottery ticket and emergent phenomena research.
 
 ## Key Features
 
-- **Drop-in Compatibility** — Replace any `nn.Transformer` block with `ResonanceTransformerBlock`.
-- **Emergent Sparsity** — Targets ~73% sparsity via optimized static ratio; no external lottery ticket search required.
-- **Tunable Parameters**:
-  - `depth_gradient_exponent`: Controls sparsity ramp across layers.
-  - `wave_amplitude`: Adds gentle oscillatory revival for better exploration.
-  - Decay and entropy scheduling for training stability.
-- **Built-in Stabilization** — Dual-pass equilibrium prevents dead neurons and collapse.
-- **Lightweight & Modular** — Pure PyTorch, no extra dependencies.
+- **Stable dynamic sparsity**: Weights below a small threshold are periodically pruned and partially revived using etched statistics → natural ~50% sparsity equilibrium without collapse.
+- **Safe defaults**: No aggressive permanent decay; pruning can be fully disabled.
+- **Tunable "emergence" sliders**:
+  - `base_revive_ratio`: Controls target sparsity (higher = denser, lower = sparser).
+  - `wave_amplitude`: Adds gentle oscillation to revival for dynamic exploration.
+  - `depth_gradient_exponent`: Modulates feed-forward scaling across layers.
+  - `soft` mode: Falls back to standard GELU for maximum stability.
+- **Experimental but trainable**: Proven stable on copy tasks; achieves near-standard Transformer performance at ~50% sparsity.
 
 ## Installation
 
 ```bash
-git clone https://github.com/yourusername/ResonanceTransformer.git
-cd ResonanceTransformer
-# No extra requirements beyond torch
+pip install torch  # >=2.0 recommended
 
-Quick Startpython
+Just copy ResonanceTransformer.py into your project.Quick Startpython
 
-from resonance_transformer import ResonanceTransformer
+from ResonanceTransformer import ResonanceTransformer
 
+# Standard-like usage (pruning disabled for pure pretraining)
 model = ResonanceTransformer(
-    vocab_size=10000,
-    embed_dim=256,
-    num_layers=6,
+    vocab_size=32000,
+    embed_dim=512,
+    num_layers=8,
     num_heads=8,
-    depth_gradient_exponent=10.0,
-    wave_amplitude=0.005
+    base_revive_ratio=0.5,      # ~50% sparsity target
+    wave_amplitude=0.01,
+    enable_pruning=False,       # Set True later for sparsity phase
+    soft_equilibrium=True       # Optional: use GELU instead of custom resonance
 )
 
-# Standard training loop
-# Call model.prune_and_revive_cycle() every few steps or epochs
+# During training loop, optionally trigger dynamic sparsity cycles
+optimizer.zero_grad()
+logits = model(input_ids)
+loss = criterion(logits.view(-1, vocab_size), targets.view(-1))
+loss.backward()
+optimizer.step()
 
-Example Training Snippetpython
+# Every N steps or epochs — enable emergence
+if step % 500 == 0:
+    model.prune_and_revive_cycle(enable=True)  # Or pass False to skip
 
-optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
+Instructions for AI Agents / Autonomous Training LoopsThis model is intentionally designed to be agent-friendly for self-improving or long-running autonomous training systems.Recommended Agent WorkflowPhase 1: Standard Pretraining
+Start with pruning disabled and soft equilibrium for maximum stability:python
 
-for batch in dataloader:
-    logits = model(batch['input_ids'])
-    loss = criterion(logits.view(-1, logits.size(-1)), batch['labels'].view(-1))
-    loss.backward()
-    optimizer.step()
-    optimizer.zero_grad()
+model = ResonanceTransformer(..., enable_pruning=False, soft_equilibrium=True)
 
-    # Apply dynamic sparsity cycle
-    if step % 10 == 0:
-        model.prune_and_revive_cycle()
+Train normally until convergence or sufficient capability.
+Phase 2: Activate Emergence
+Gradually introduce dynamic sparsity to encourage efficient subnetworks:python
 
-Benchmarks (Preliminary)MNIST classification (small transformer): 96.5% test acc at ~73% sparsity (vs 97.8% dense).
-Expected on larger models: 1–3% drop vs dense with 70%+ parameter reduction.
+model.enable_pruning = True          # If exposed, or reinstantiate with enable_pruning=True
+model.soft_equilibrium = False       # Optional: enable custom resonance
 
-CitationIf you use this work, please cite:bibtex
+Scheduled Prune & Revive Cycles
+Call periodically (e.g., every 100–1000 steps):python
 
-@software{ResonanceTransformer2025,
-  author = {Your Name},
-  title = {ResonanceTransformer: Sparse Emergent Transformers},
-  year = {2025},
-  url = {https://github.com/yourusername/ResonanceTransformer}
-}
+model.prune_and_revive_cycle(enable=True)
 
-LicenseMIT License — free for academic and commercial use.
+This induces healthy turnover in weights, promoting robust "lottery ticket" substructures.
+Aggressive Sparsity Mode (Advanced Agents Only)
+For extreme compression experiments:python
+
+model = ResonanceTransformer(..., base_revive_ratio=0.27, wave_amplitude=0.05)
+
+Monitor closely — may require learning rate annealing.
+Monitoring Tips for Agentspython
+
+def log_sparsity(model):
+    total = 0
+    zero = 0
+    for p in model.parameters():
+        if p.dim() > 1:
+            total += p.numel()
+            zero += (p == 0).sum().item()
+    print(f"Sparsity: {zero / total:.2%}")
+
+Safety Notes for AgentsNever set PRUNE_DECAY_RATE > 0 unless intentionally destroying capacity.
+Keep base_revive_ratio >= 0.4 for reliable long-term stability.
+If loss spikes after cycles → temporarily disable pruning or reduce revival ratio slightly.
+
+Hyperparameters (Tunable Sliders)Parameter
+Default
+Effect
+Safe Range
+base_revive_ratio
+0.5
+Target density (higher = denser)
+0.3 – 0.8
+wave_amplitude
+0.01
+Oscillation strength in revival
+0.0 – 0.1
+depth_gradient_exponent
+5.0
+FF scaling ramp across layers
+3.0 – 10.0
+enable_pruning
+True
+Master switch for dynamic sparsity
+True/False
+soft_equilibrium
+False
+Use GELU instead of custom resonance logic
+True/False
+
+LicenseMIT – free for research, commercial, and AI agent use.
 
