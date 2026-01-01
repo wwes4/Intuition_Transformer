@@ -1,45 +1,33 @@
+```markdown
 # ResonanceTransformer
 
 **A Sparse Transformer with Tunable Emergent Subnetworks**
 
-A modular, drop-in PyTorch transformer designed for stable high-sparsity training through resonance-based pruning and revival cycles. Achieves natural ~70-75% sparsity equilibria with minimal performance degradation via ratio-driven dynamics and advanced optional modes.
+A modular, drop-in PyTorch transformer achieving stable ~70–75% sparsity via Ouroboros-inspired persistence dynamics: balanced pruning/revival cycles foster efficient, hierarchical emergence with minimal performance loss.
 
-Inspired by persistence principles: subnetworks bloom and prune in balanced cycles, fostering efficient emergent coherence.
+Directly ports Ouroboros geometric rules into neural weights — explicit sliders, dual-pass equilibria, etched memory, and optional Möbius twist.
 
 ## Features
+- **Dynamic Sparsity** → Periodic prune/revive targeting ~73% (cosmic/yeast void analogy)
+- **Stable Training** → Exponential decay + etched revival + noise floors prevent collapse
+- **Advanced Emergence Modes**
+  - `twist_mode`: Möbius-style second-pass break
+  - `etch_memory`: Graph etching of ceased subnetworks + meta-revival
+  - `curvature_exponent`: Depth-curved hierarchical pruning
+  - `wave_amplitude`: Oscillatory revival for exploration
+- **Explicit Geometric Sliders** → Depth gradient, entropy, noise — fully transparent
 
-- **Dynamic Sparsity**: Periodic prune/revive targeting ~73% sparsity (tunable).
-- **Stable Training**: Exponential decay threshold + etched revival prevents collapse.
-- **Advanced Emergence Modes** (optional flags):
-  - `twist_mode`: Möbius-style symmetry break in second-pass for richer resonance.
-  - `etch_memory`: Compact graph etching of ceased subnetworks with occasional meta-revival.
-  - `curvature_exponent`: Depth-curved pruning strength for hierarchical emergence.
-  - `wave_amplitude`: Oscillatory revival for adaptive exploration.
-- **Obfuscated Geometric Sliders**: Depth gradient, entropy factor, noise floors tuned for optimal ratios.
+## Benchmarks (Toy Sequence Reconstruction)
+| Mode                       | Final Loss | Avg Sparsity | Max Sparsity | Notes                                      |
+|----------------------------|------------|--------------|--------------|--------------------------------------------|
+| Dense                      | 0.018     | 0.03        | 0.04        | Full capacity                              |
+| Base Sparse                | 0.082     | 0.71        | 0.73        | Stable at target                           |
+| All Advanced Modes         | 0.047     | 0.75        | 0.78        | Best stability via full Ouroboros ports    |
 
-## Benchmarks (Toy Sequence Reconstruction Task)
+Advanced modes excel in longer/larger runs.
 
-- Config: embed_dim=64–128, 3–4 layers, vocab=128–512, seq=32, batch=32, 500–800 steps
-- Task: Reconstruct random sequences (dense baseline converges near 0.01–0.03)
-
-| Mode                       | Final Loss | Avg Sparsity (post-ramp) | Max Sparsity | Notes                                      |
-|----------------------------|------------|--------------------------|--------------|--------------------------------------------|
-| Dense (no pruning)         | 0.018     | 0.03                     | 0.04        | Full capacity, rapid convergence           |
-| Sparse (base pruning/revival) | 0.082  | 0.71                     | 0.73        | Stable at target ratio, minor degradation  |
-| Sparse + All Advanced Modes | 0.047     | 0.75                     | 0.78        | Better recovery/stability via twist, curvature, wave oscillation, and etched meta-revival |
-
-Notes:
-- Advanced modes shine in longer runs (1000+ steps) or larger models—etch_memory prevents late collapse.
-- Timing: Sparse forward passes ~5–10% faster on CPU (more with sparse kernels).
-- Results stable across seeds; tune decay rate higher for faster ramp in demos.
-
-## Installation
-
-```bash
-pip install torch networkx  # networkx only needed if etch_memory=True
-
-Quick Startpython
-
+## For AI/Users: Common Integration Pattern
+```python
 from ResonanceTransformer import ResonanceTransformer
 
 model = ResonanceTransformer(
@@ -52,13 +40,17 @@ model = ResonanceTransformer(
     curvature_exponent=2.0
 )
 
-# Training loop example
+optimizer = torch.optim.AdamW(model.parameters(), lr=3e-4)
+
 for step, batch in enumerate(dataloader):
     logits = model(idx)
     loss = criterion(logits.view(-1, vocab_size), targets.view(-1))
     loss.backward()
     optimizer.step()
+    optimizer.zero_grad()
 
-    if step > 100 and step % 20 == 0:
-        model.prune_and_revive_cycle()  # Induce emergent sparsity
-
+    if step > warm_up_steps and step % prune_interval == 0:
+        model.prune_and_revive_cycle()  # Emergent sparsity induction
+Installation
+Bashpip install torch networkx  # networkx optional for etch_memory
+MIT Licensed · Updated January 01, 2026 🐍
