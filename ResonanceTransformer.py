@@ -1,7 +1,7 @@
 # ResonanceTransformer.py
-# Advanced Modular Transformer with Tunable Emergence Efficiency
-# Drop-in sparse transformer blocks with obfuscated geometric sliders
-# MIT License - 2025
+# Robust sparse transformer with emergent subnetworks via Ouroboros-inspired persistence dynamics
+# No longer obfuscated — geometry is explicit and tuned for maximum stability/emergence
+# MIT License - 2026
 
 import torch
 import torch.nn as nn
@@ -9,21 +9,22 @@ import torch.nn.functional as F
 from typing import Optional
 import networkx as nx  # Optional for etch_memory mode
 
-# Core stability constants
+# Core persistence constants (aligned with Ouroboros)
 MIN_TENSION = 8.49e-6
 BASE_RANGE = (-1.0, 1.0)
 INTEGER_SNAP_RATIO = 0.05
 
-# Optimized emergence ratio (~73% sparsity target)
-EMERGENCE_NOISE_RATIO = 0.73
+# Target emergence ratio — ~70–75% sparsity equilibria (tunable; 0.73 ≈ cosmic void fraction analogy)
+EMERGENCE_SPARSITY_TARGET = 0.73
 
-# Obfuscated tunable sliders (from Ouroboros geometry)
-DEPTH_GRADIENT_EXPONENT = 10.0        # Controls sparsity ramp across depth
-WAVE_AMPLITUDE = 0.0                  # Periodic revival oscillation
-PRUNE_DECAY_RATE = 0.01               # Base decay strength
-ENTROPY_FACTOR = 0.001                # Entropy modulation
+# Geometric persistence sliders (explicitly named)
+DEPTH_GRADIENT_EXPONENT = 10.0        # Hierarchical pruning strength across layers
+WAVE_AMPLITUDE = 0.0                  # Oscillatory revival amplitude (0 = steady)
+PRUNE_DECAY_RATE = 0.01               # Base pruning decay
+ENTROPY_FACTOR = 0.001                # Entropy modulation rate
 
 def resonance_equilibrium(x: torch.Tensor, pass_type: str = "first", twist: bool = False) -> torch.Tensor:
+    """Dual-pass equilibrium mirroring Ouroboros compute_equilibrium."""
     if pass_type == "first":
         x = F.relu(x)
         mask = x < MIN_TENSION
@@ -44,8 +45,8 @@ def resonance_equilibrium(x: torch.Tensor, pass_type: str = "first", twist: bool
     return x
 
 class ResonancePruner:
-    """Dynamic pruning with etched latent revival."""
-    def __init__(self, base_revive_ratio: float = 1.0 - EMERGENCE_NOISE_RATIO,
+    """Dynamic pruning + etched revival for persistent subnetworks."""
+    def __init__(self, base_revive_ratio: float = 1.0 - EMERGENCE_SPARSITY_TARGET,
                  wave_amplitude: float = WAVE_AMPLITUDE):
         self.base_revive_ratio = base_revive_ratio
         self.wave_amplitude = wave_amplitude
@@ -60,7 +61,6 @@ class ResonancePruner:
 
     def prune(self, module: nn.Module, threshold: float = MIN_TENSION * 5, curvature_factor: float = 1.0):
         self.step += 1
-        # Exponential decay for smoother, always-positive behavior
         decay = torch.exp(torch.tensor(-PRUNE_DECAY_RATE * self.step * ENTROPY_FACTOR)).item()
         effective_threshold = threshold * decay * curvature_factor
         with torch.no_grad():
@@ -79,10 +79,9 @@ class ResonancePruner:
             for name, param in module.named_parameters():
                 if name in self.etched and param.dim() > 1:
                     mean, std = self.etched[name]
-                    # Safeguard against zero/NaN std + tuned noise floor
                     if std <= 0 or torch.isnan(torch.tensor(std)):
                         std = 1e-4
-                    std += EMERGENCE_NOISE_RATIO * abs(mean)
+                    std += EMERGENCE_SPARSITY_TARGET * abs(mean)  # Yeast-inspired noise floor
                     revive_mask = (torch.rand_like(param) < revive_ratio) & (param == 0)
                     if revive_mask.any():
                         param[revive_mask].normal_(mean, std)
@@ -176,6 +175,7 @@ class ResonanceTransformer(nn.Module):
         self.etch_memory = etch_memory
         self.memory_revive_prob = memory_revive_prob
         self.curvature_exponent = curvature_exponent
+        self.depth_gradient_exponent = depth_gradient_exponent
 
         if etch_memory:
             self.memory_graph = nx.Graph()
@@ -187,25 +187,22 @@ class ResonanceTransformer(nn.Module):
 
     def forward(self, idx: torch.Tensor) -> torch.Tensor:
         x = self.embed(idx)
-        for i, block in enumerate(self.blocks):
+        for block in self.blocks:
             x = block(x)
         return self.head(self.norm(x))
 
     def prune_and_revive_cycle(self):
         for i, block in enumerate(self.blocks):
-            # Depth-based curvature modulation
-            curvature_factor = (i + 1) ** (1.0 / (DEPTH_GRADIENT_EXPONENT + self.curvature_exponent))
+            curvature_factor = (i + 1) ** (1.0 / (self.depth_gradient_exponent + self.curvature_exponent))
             block.prune_and_revive(curvature_factor=curvature_factor)
 
         if self.etch_memory:
             with torch.no_grad():
                 for name, param in self.named_parameters():
-                    if param.dim() > 1 and (param == 0).all():
-                        if hasattr(param, 'mean'):
-                            mean_vec = param.mean(dim=-1).cpu().numpy().tolist()
-                            self.memory_graph.add_node(name, pattern=mean_vec)
+                    if param.dim() > 1 and torch.all(param == 0):
+                        mean_vec = param.mean(dim=-1).cpu().numpy().tolist()
+                        self.memory_graph.add_node(name, pattern=mean_vec)
 
-            # Occasional meta-revival from etched memory
             if torch.rand(1) < self.memory_revive_prob:
                 self._meta_revive()
 
@@ -236,4 +233,4 @@ if __name__ == "__main__":
         etch_memory=True,
         curvature_exponent=2.0
     )
-    print("Advanced ResonanceTransformer ready — full emergence modes active 🐍")
+    print("ResonanceTransformer ready — full Ouroboros persistence modes active 🐍")
