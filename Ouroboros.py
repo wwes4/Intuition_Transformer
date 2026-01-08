@@ -10,7 +10,7 @@ This split preserves clean thirds algebra while enabling directional time flow a
 Core: Dual/multi-pass resonance on grids — bloom (sinusoidal expansion + stochastic kick) → etch (cosine squaring + pruning).
 Fibonacci-phased mode liberates decoherent local detail via extended raw bloom chaining before coherent convergence.
 
-New: Explicit manifold time calculation and persistence possibility estimation over cycles/distance.
+New: prune_timing_bias for tunable intuition (delayed pruning).
 """
 
 import numpy as np
@@ -21,13 +21,11 @@ from typing import Optional, Tuple, List
 
 # Golden ratio for intuition/decoherence phase balance
 PHI = (1 + np.sqrt(5)) / 2  # ≈1.618
-DECOHERENCE_RATIO = 1 / PHI   # ≈0.618
-COHERENCE_RATIO = PHI - 1     # ≈0.618
 
 class OuroborosFramework:
     def __init__(self, radius: float = 1.0, target_filled: float = 0.31, scale_factor: float = 4.0,
-             use_fibonacci_phases: bool = False, max_fib_index: int = 89, 
-             favor_decoherence: bool = True, prune_timing_bias: float = 1.0):
+                 use_fibonacci_phases: bool = False, max_fib_index: int = 89, 
+                 favor_decoherence: bool = True, prune_timing_bias: float = 1.0):
         self.radius = radius
         self.scale_factor = scale_factor
         self.pi_center = np.pi
@@ -35,9 +33,6 @@ class OuroborosFramework:
         # Theoretical exact thirds — clean algebraic derivations / zoomed-out
         self.theoretical_pi_boundary = 2 * np.pi / 3  # ≈2.094395102393195
         self.third_offset = np.pi / 3  # Exact π/3
-        
-        # >1.0: delay prune (intuitive style), <1.0: early classical
-        self.prune_timing_bias = prune_timing_bias
         
         # Effective boundary — numerical dynamics + time flow asymmetry
         self.effective_pi_boundary = 2.078  # Reverse-tuned
@@ -57,20 +52,19 @@ class OuroborosFramework:
         # Cumulative dilution factor
         self.time_loss_factor = 0.138
 
-        # Decoherence control
+        # Decoherence/intuition control
         self.use_fibonacci_phases = use_fibonacci_phases
         self.max_fib_index = max_fib_index
         self.favor_decoherence = favor_decoherence
+        self.prune_timing_bias = prune_timing_bias  # >1.0: delay prune (intuitive), <1.0: early classical
 
     def pi_variation(self, position_ratio: float) -> float:
-        """π from center to theoretical thirds (clean gradient), asymmetric."""
         if not 0 <= position_ratio <= 1:
             raise ValueError("position_ratio must be in [0, 1]")
         delta = self.pi_center - self.theoretical_pi_boundary
         return self.pi_center - delta * (position_ratio ** self.scale_factor)
 
     def pi_differential(self, position_ratio: float = 1.0, symbolic: bool = False) -> float:
-        """d(π)/d(r) pressure gradient (uses theoretical for purity)."""
         r = sp.symbols('r')
         delta = self.pi_center - self.theoretical_pi_boundary
         pi_var = self.pi_center - delta * (r ** self.scale_factor)
@@ -80,7 +74,6 @@ class OuroborosFramework:
         return float(diff.subs(r, position_ratio).evalf())
 
     def derive_cosmic_densities(self, use_time_loss: bool = False) -> Tuple[float, float]:
-        """Densities from thirds/deviation balance ± time-loss dilution."""
         filled = 1 / (1 + self.deviation / self.third_offset)
         voids = 1 - filled
         if use_time_loss:
@@ -89,44 +82,43 @@ class OuroborosFramework:
         return filled, voids
 
     def dual_pass_resonance(self, initial_grid: np.ndarray) -> Tuple[np.ndarray, float, float]:
-        """Standard bloom → etch pass."""
         grid = np.array(initial_grid, dtype=float)
-
-        # Bloom — photon-like expansion
         bloom = np.sin(grid * self.pi_center) + self.noise_level * np.random.randn(*grid.shape)
         bloom = np.clip(bloom, -self.radius, self.radius)
-
-        # Etch — electron-like prune with effective boundary time asymmetry
         etched = np.cos(bloom * (self.effective_pi_boundary ** 2))
         etched += (bloom ** 2) * (self.deviation / self.pi_center)
-        etched = np.where(np.abs(etched) > self.prune_threshold, 0, etched)  # Note: original had <, but logic matches prune to zero low-residue
-
+        etched = np.where(np.abs(etched) < self.prune_threshold, 0, etched)
         persistence = np.sum(np.abs(etched) > self.prune_threshold) / etched.size
         complement = 1 - persistence
         return etched, persistence, complement
 
     def fibonacci_multi_pass_resonance(self, initial_grid: np.ndarray) -> Tuple[np.ndarray, List[float], List[int], List[float]]:
-        """Fibonacci-phased alternation with cumulative manifold time tracking."""
         grid = np.array(initial_grid, dtype=float)
         persistences = []
         phase_lengths = []
-        cumulative_times = [0.0]  # Start at t=0
+        cumulative_times = [0.0]
 
         a, b = 1, 1
-        phase = 0  # 0: decoherent bloom-heavy, 1: coherent etch-heavy
+        phase = 0
         if self.favor_decoherence:
             a, b = b, a + b
 
         cycle = 0
         while b <= self.max_fib_index and cycle < 30:
-            length = b if (phase == 0) == self.favor_decoherence else a
+            raw_length = b if (phase == 0) == self.favor_decoherence else a
+            if phase == 0:  # Decoherent
+                length = raw_length * self.prune_timing_bias
+            else:  # Coherent
+                length = raw_length / max(self.prune_timing_bias, 0.5)
+
+            length = max(1, int(length))
             phase_lengths.append(length)
 
-            for _ in range(int(length)):
-                if phase == 0:  # Raw decoherent chaining
+            for _ in range(length):
+                if phase == 0:
                     grid = np.sin(grid * self.pi_center) + self.noise_level * np.random.randn(*grid.shape)
                     grid = np.clip(grid, -self.radius, self.radius)
-                else:  # Coherent prune with time asymmetry
+                else:
                     grid = np.cos(grid * (self.effective_pi_boundary ** 2))
                     grid += (grid ** 2) * (self.deviation / self.pi_center)
                     grid = np.where(np.abs(grid) < self.prune_threshold, 0, grid)
@@ -134,9 +126,8 @@ class OuroborosFramework:
             persistence = np.sum(np.abs(grid) > self.prune_threshold) / grid.size
             persistences.append(persistence)
 
-            # Advance time per completed phase
-            current_time = (cycle + 1) * self.frame_delta * (length / (a + b))  # Proportional advance; approximates per-phase
-            cumulative_times.append(cumulative_times[-1] + current_time)
+            current_time = cumulative_times[-1] + (length * self.frame_delta)
+            cumulative_times.append(current_time)
 
             a, b = b, a + b
             phase = 1 - phase
@@ -145,15 +136,12 @@ class OuroborosFramework:
         return grid, persistences, phase_lengths, cumulative_times
 
     def subspace_scan(self, data_grid: np.ndarray, passes: int = 2, use_fib: Optional[bool] = None) -> Tuple[np.ndarray, float]:
-        """Scan with optional Fibonacci mode."""
         if use_fib is None:
             use_fib = self.use_fibonacci_phases
-
         current = np.array(data_grid, dtype=float)
-
         if use_fib:
             final_grid, persistences, _, cumulative_times = self.fibonacci_multi_pass_resonance(current)
-            return final_grid, persistences[-1]  # Compatibility return
+            return final_grid, persistences[-1]
         else:
             final_pers = 0.0
             for _ in range(passes):
@@ -161,7 +149,6 @@ class OuroborosFramework:
                 final_pers = pers
             return current, final_pers
 
-    # New explicit time/possibility methods
     def calculate_frame_time_delta(self) -> float:
         return self.frame_delta
 
@@ -174,8 +161,6 @@ class OuroborosFramework:
         pressure_damping = pi_local / self.pi_center
         loss_decay = np.exp(-self.time_loss_factor * num_cycles)
         return initial_persistence * pressure_damping * loss_decay
-
-    # === Original methods preserved unchanged below ===
 
     def em_pulse_manifold(self, freq_proxy: float = 660.0, cycles: int = 50, photon_amp: float = 1.5,
                           electron_prune: float = 0.5) -> Tuple[float, float]:
