@@ -26,7 +26,8 @@ COHERENCE_RATIO = PHI - 1     # ≈0.618
 
 class OuroborosFramework:
     def __init__(self, radius: float = 1.0, target_filled: float = 0.31, scale_factor: float = 4.0,
-                 use_fibonacci_phases: bool = False, max_fib_index: int = 89, favor_decoherence: bool = True):
+             use_fibonacci_phases: bool = False, max_fib_index: int = 89, 
+             favor_decoherence: bool = True, prune_timing_bias: float = 1.0):
         self.radius = radius
         self.scale_factor = scale_factor
         self.pi_center = np.pi
@@ -34,6 +35,9 @@ class OuroborosFramework:
         # Theoretical exact thirds — clean algebraic derivations / zoomed-out
         self.theoretical_pi_boundary = 2 * np.pi / 3  # ≈2.094395102393195
         self.third_offset = np.pi / 3  # Exact π/3
+        
+        # >1.0: delay prune (intuitive style), <1.0: early classical
+        self.prune_timing_bias = prune_timing_bias
         
         # Effective boundary — numerical dynamics + time flow asymmetry
         self.effective_pi_boundary = 2.078  # Reverse-tuned
