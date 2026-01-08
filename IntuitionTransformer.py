@@ -49,36 +49,40 @@ class IntuitionTransformer(nn.Module):
         self.rebound_amp = rebound_amp
         self.sparsity_target = sparsity_target
 
-    def intuition_prune_revive(self, weights: torch.Tensor) -> torch.Tensor:
-        """Upgraded resonance cycle with intuition bias + optional Fibonacci phasing."""
-        weights_np = weights.detach().cpu().numpy()
-        original_shape = weights_np.shape
-        
-        # Run Ouroboros scan (fib mode uses bias-scaled phasing)
-        final_grid, final_pers = self.ouro.subspace_scan(weights_np.flatten().reshape(1, -1))  # Treat as 1D manifold row
-        
-        # Safeguard: If persistence too low (overload risk), damp bias temporarily
-        if final_pers < 0.2:  # Tune threshold as needed
-            print(f"Intuition overload guard: Persistence {final_pers:.3f} low—auto-damping bias")
-            self.ouro.prune_timing_bias = min(self.ouro.prune_timing_bias, 1.0)  # Revert to balanced
-        
-        # Estimate possibility over "cycles" (proxy from fib phases if available)
-        est_poss = self.ouro.estimate_persistence_possibility(initial_persistence=0.75, num_cycles=10)
-        
-        # Mask from persistent residue (align to target sparsity)
-        threshold = np.quantile(np.abs(final_grid), 1 - self.sparsity_target)
-        mask = np.abs(final_grid) > threshold
-        
-        # Rebound amp integration (thirds reflection on surviving)
-        if self.rebound_amp:
-            masked_weights = weights_np * mask
-            theta_proxy = np.linspace(0, 1, masked_weights.size).reshape(masked_weights.shape)
-            rebound = masked_weights * np.cos(theta_proxy * 2 * np.pi + self.ouro.third_offset)
-            weights_np = masked_weights + rebound * 0.5  # Tuned boost
-        
-        new_weights = weights * torch.from_numpy(mask).to(weights.device).float()
-        
-        return new_weights
+     def intuition_prune_revive(self, weights: torch.Tensor) -> torch.Tensor:
+     """Upgraded resonance cycle with intuition bias + optional Fibonacci phasing."""
+     weights_np = weights.detach().cpu().numpy()
+     original_shape = weights_np.shape
+     
+     # Flatten for Ouroboros (1D manifold scan)
+     flattened = weights_np.flatten().reshape(1, -1)
+     final_grid, final_pers = self.ouro.subspace_scan(flattened)
+     
+     # Safeguard: If persistence too low (overload risk), damp bias temporarily
+     if final_pers < 0.2:  # Tune threshold as needed
+         print(f"Intuition overload guard: Persistence {final_pers:.3f} low—auto-damping bias")
+         self.ouro.prune_timing_bias = min(self.ouro.prune_timing_bias, 1.0)
+     
+     # Quantile threshold for target sparsity
+     threshold = np.quantile(np.abs(final_grid), 1 - self.sparsity_target)
+     mask = np.abs(final_grid) > threshold  # Shape (1, total_elements)
+     
+     # Reshape mask back to original weight shape
+     mask = mask.reshape(original_shape)
+     
+     # Apply mask
+     masked_weights = weights_np * mask
+     
+     # Rebound amp integration (thirds reflection on surviving)
+     if self.rebound_amp:
+         theta_proxy = np.linspace(0, 1, weights.numel()).reshape(original_shape)
+         rebound = masked_weights * np.cos(theta_proxy * 2 * np.pi + self.ouro.third_offset)
+         weights_np = masked_weights + rebound * 0.5  # Tuned boost
+     
+     # Convert back to torch tensor with mask applied
+     new_weights = torch.from_numpy(weights_np).to(weights.device)
+     
+     return new_weights
 
     def forward(self, src: torch.Tensor, src_mask: Optional[torch.Tensor] = None, apply_intuition_cycle: bool = True) -> torch.Tensor:
         x = self.embedding(src) * np.sqrt(self.d_model)
